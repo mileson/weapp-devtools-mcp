@@ -11,7 +11,17 @@ import { connectionOverridesSchema } from "../config.js";
 import { redactText, safeJson, sanitizeForOutput } from "../security.js";
 
 export type ToolContext = Context<Record<string, unknown> | undefined>;
-export type AnyTool = Tool<Record<string, unknown> | undefined>;
+export type ToolCategory =
+  | "core"
+  | "page"
+  | "element"
+  | "network"
+  | "debug"
+  | "cli"
+  | "experimental";
+export type AnyTool = Tool<Record<string, unknown> | undefined> & {
+  category?: ToolCategory;
+};
 
 export const connectionContainerSchema = z.object({
   connection: connectionOverridesSchema.optional(),

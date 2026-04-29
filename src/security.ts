@@ -8,6 +8,7 @@ const DEFAULT_MAX_OUTPUT_CHARS = 50000;
 const DEFAULT_MAX_STRING_CHARS = 4000;
 const DEFAULT_MAX_ARRAY_ITEMS = 80;
 const DEFAULT_MAX_OBJECT_KEYS = 120;
+const DEFAULT_MAX_NETWORK_LOGS = 1000;
 
 const sensitiveKeyPattern =
   /(^|[_-])(password|passwd|pwd|token|secret|ticket|session|cookie|authorization|auth|credential|privatekey|accesskey|access_token|refresh_token|openid|unionid|phone|mobile|email|idcard|id_card|identity|jwt)([_-]|$)/i;
@@ -34,6 +35,17 @@ function envFlag(name: string, defaultValue: boolean): boolean {
   return /^(1|true|yes|on)$/i.test(raw.trim());
 }
 
+function envList(name: string): string[] {
+  const raw = process.env[name];
+  if (!raw) {
+    return [];
+  }
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function positiveIntEnv(name: string, defaultValue: number): number {
   const parsed = Number.parseInt(process.env[name] ?? "", 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
@@ -55,8 +67,32 @@ export function allowHighRiskWxMethods(): boolean {
   return envFlag("WEAPP_ALLOW_HIGH_RISK_WX", false);
 }
 
+export function allowRiskyToolCalls(): boolean {
+  return envFlag("WEAPP_ALLOW_RISKY_TOOLS", false);
+}
+
+export function allowEvaluateTool(): boolean {
+  return envFlag("WEAPP_ALLOW_EVALUATE", false) || allowRiskyToolCalls();
+}
+
+export function allowMockWxTool(): boolean {
+  return envFlag("WEAPP_ALLOW_MOCK_WX", false) || allowRiskyToolCalls();
+}
+
+export function allowCliTool(): boolean {
+  return envFlag("WEAPP_ALLOW_CLI_COMMANDS", false) || allowRiskyToolCalls();
+}
+
+export function autoNetworkMonitoringEnabled(): boolean {
+  return envFlag("WEAPP_ENABLE_NETWORK_MONITORING", true);
+}
+
 export function maxOutputChars(): number {
   return positiveIntEnv("WEAPP_MAX_OUTPUT_CHARS", DEFAULT_MAX_OUTPUT_CHARS);
+}
+
+export function maxNetworkLogs(): number {
+  return positiveIntEnv("WEAPP_MAX_NETWORK_LOGS", DEFAULT_MAX_NETWORK_LOGS);
 }
 
 function maxStringChars(): number {
@@ -230,14 +266,47 @@ export function maskedInputValue(value: unknown): string {
   return redactText(String(value));
 }
 
-export function getBlockedWxMethodReason(method: string): string | null {
-  if (allowHighRiskWxMethods()) {
+export function getBlockedWxMethodReason(
+  method: string,
+  riskConsent?: boolean
+): string | null {
+  const normalized = method.trim();
+
+  const configuredBlocked = envList("WEAPP_BLOCKED_WX_METHODS");
+  if (
+    configuredBlocked.some(
+      (item) => item.toLowerCase() === normalized.toLowerCase()
+    )
+  ) {
+    return "configured blocklist";
+  }
+
+  const configuredAllowed = envList("WEAPP_ALLOWED_WX_METHODS");
+  if (
+    configuredAllowed.some(
+      (item) => item.toLowerCase() === normalized.toLowerCase()
+    )
+  ) {
     return null;
   }
 
-  const normalized = method.trim();
+  if (allowHighRiskWxMethods() || allowRiskyToolCalls() || riskConsent) {
+    return null;
+  }
+
   const blocked = highRiskWxMethods.find(({ pattern }) => pattern.test(normalized));
   return blocked?.reason ?? null;
+}
+
+export function riskGate(
+  capability: string,
+  riskConsent: boolean | undefined,
+  globallyAllowed: boolean
+): string | null {
+  if (globallyAllowed || allowRiskyToolCalls() || riskConsent) {
+    return null;
+  }
+  return `${capability} requires explicit consent. Pass riskConsent=true for this call, or set WEAPP_ALLOW_RISKY_TOOLS=true / a capability-specific WEAPP_ALLOW_* environment variable in a trusted local session.`;
 }
 
 export async function createScreenshotPath(): Promise<string> {

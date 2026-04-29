@@ -49,6 +49,7 @@ const screenshotParameters = connectionContainerSchema.extend({
 const callWxMethodParameters = connectionContainerSchema.extend({
   method: z.string().trim().min(1),
   args: z.array(z.unknown()).optional(),
+  riskConsent: z.coerce.boolean().optional().default(false),
 });
 
 const getConsoleLogsParameters = connectionContainerSchema.extend({
@@ -258,10 +259,10 @@ function createCallWxMethodTool(manager: WeappAutomatorManager): AnyTool {
     execute: async (rawArgs, context: ToolContext) =>
       withUserErrorResult(async () => {
       const args = callWxMethodParameters.parse(rawArgs ?? {});
-      const blockedReason = getBlockedWxMethodReason(args.method);
+      const blockedReason = getBlockedWxMethodReason(args.method, args.riskConsent);
       if (blockedReason) {
         return toErrorResult(
-          `Blocked high-risk wx method "${redactText(args.method)}" (${blockedReason}). Set WEAPP_ALLOW_HIGH_RISK_WX=true only in a trusted local session.`
+          `Blocked high-risk wx method "${redactText(args.method)}" (${blockedReason}). Pass riskConsent=true for this call, set WEAPP_ALLOW_HIGH_RISK_WX=true, or add the method to WEAPP_ALLOWED_WX_METHODS in a trusted local session.`
         );
       }
       return manager.withMiniProgram<ContentResult>(

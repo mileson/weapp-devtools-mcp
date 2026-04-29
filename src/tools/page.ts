@@ -49,8 +49,17 @@ const getElementsParameters = connectionContainerSchema.extend({
   withWxml: z.boolean().optional().default(false),
 });
 
+const pageSnapshotParameters = connectionContainerSchema.extend({
+  format: z.enum(["compact", "minimal", "json"]).optional().default("compact"),
+  maxElements: z.coerce.number().int().positive().max(1000).optional().default(200),
+  includePosition: z.coerce.boolean().optional().default(true),
+  includeAttributes: z.coerce.boolean().optional().default(false),
+  selectors: z.array(z.string().trim().min(1)).optional(),
+});
+
 export function createPageTools(manager: WeappAutomatorManager): AnyTool[] {
   return [
+    createPageSnapshotTool(manager),
     createGetElementTool(manager),
     createGetElementsTool(manager),
     createWaitForElementTool(manager),
@@ -59,6 +68,184 @@ export function createPageTools(manager: WeappAutomatorManager): AnyTool[] {
     createSetPageDataTool(manager),
     createCallPageMethodTool(manager),
   ];
+}
+
+function createPageSnapshotTool(manager: WeappAutomatorManager): AnyTool {
+  return {
+    name: "page_snapshot",
+    description:
+      "获取当前页面的元素快照，用于快速理解页面结构。compact/minimal 格式适合节省上下文，json 格式适合程序处理。",
+    parameters: pageSnapshotParameters,
+    execute: async (rawArgs, context: ToolContext) =>
+      withUserErrorResult(async () => {
+        const args = pageSnapshotParameters.parse(rawArgs ?? {});
+        return manager.withPage<ContentResult>(
+          context.log,
+          { overrides: args.connection },
+          async (page) => {
+            const selectors =
+              args.selectors?.length
+                ? args.selectors
+                : [
+                    "*",
+                    "view",
+                    "text",
+                    "button",
+                    "image",
+                    "input",
+                    "textarea",
+                    "scroll-view",
+                    "swiper",
+                    "navigator",
+                    "form",
+                    "checkbox",
+                    "radio",
+                    "switch",
+                    "slider",
+                    "picker",
+                  ];
+
+            const seen = new Set<unknown>();
+            const items: any[] = [];
+            let strategy = "none";
+
+            for (const selector of selectors) {
+              if (items.length >= args.maxElements) {
+                break;
+              }
+              try {
+                const elements = await page.$$(selector);
+                if (!Array.isArray(elements) || elements.length === 0) {
+                  continue;
+                }
+                strategy = selector === "*" ? "wildcard" : "selector-list";
+                for (const element of elements) {
+                  const id = (element as { id?: unknown }).id ?? element;
+                  if (seen.has(id)) {
+                    continue;
+                  }
+                  seen.add(id);
+                  items.push(element);
+                  if (items.length >= args.maxElements) {
+                    break;
+                  }
+                }
+                if (selector === "*" && items.length > 0) {
+                  break;
+                }
+              } catch {
+                // Ignore unsupported selectors and continue with fallbacks.
+              }
+            }
+
+            const elements = await Promise.all(
+              items.map(async (element, index) => {
+                const [summary, idAttr, classAttr, testIdAttr] = await Promise.all([
+                  summarizeElement(element).catch(() => ({})),
+                  typeof element?.attribute === "function"
+                    ? element.attribute("id").catch(() => null)
+                    : null,
+                  typeof element?.attribute === "function"
+                    ? element.attribute("class").catch(() => null)
+                    : null,
+                  typeof element?.attribute === "function"
+                    ? element.attribute("data-testid").catch(() => null)
+                    : null,
+                ]);
+
+                const tagName =
+                  typeof element?.tagName === "string" ? element.tagName : "unknown";
+                const elementSummary = summary as Record<string, unknown>;
+                const selectorHint = buildSelectorHint(tagName, {
+                  id: idAttr,
+                  className: classAttr,
+                  testId: testIdAttr,
+                  index,
+                });
+
+                const snapshot: Record<string, unknown> = {
+                  index,
+                  selectorHint,
+                  tagName,
+                  text: elementSummary.text ?? null,
+                  value: elementSummary.value ?? null,
+                };
+
+                if (args.includePosition) {
+                  snapshot.size = elementSummary.size ?? null;
+                  snapshot.offset = elementSummary.offset ?? null;
+                }
+
+                if (args.includeAttributes) {
+                  snapshot.attributes = {
+                    id: idAttr,
+                    class: classAttr,
+                    "data-testid": testIdAttr,
+                  };
+                }
+
+                return snapshot;
+              })
+            );
+
+            const pagePath = (page as { path?: string }).path ?? null;
+            const payload = {
+              path: pagePath,
+              strategy,
+              count: elements.length,
+              truncated: items.length >= args.maxElements,
+              elements,
+            };
+
+            if (args.format === "json") {
+              return toTextResult(formatJson(payload));
+            }
+
+            const lines = [
+              `# Page: ${pagePath ?? "(unknown)"}`,
+              `# Elements: ${elements.length}`,
+              `# Format: ${args.format}`,
+            ];
+            for (const element of elements) {
+              const text =
+                typeof element.text === "string" && element.text
+                  ? ` "${String(element.text).replace(/\s+/g, " ").trim()}"`
+                  : "";
+              if (args.format === "minimal") {
+                lines.push(`${element.selectorHint} ${element.tagName}${text}`);
+              } else {
+                const offset = element.offset as { left?: number; top?: number } | null;
+                const size = element.size as { width?: number; height?: number } | null;
+                const pos =
+                  offset && size
+                    ? ` pos=[${offset.left ?? "?"},${offset.top ?? "?"}] size=[${size.width ?? "?"}x${size.height ?? "?"}]`
+                    : "";
+                lines.push(`${element.selectorHint} ${element.tagName}${text}${pos}`);
+              }
+            }
+
+            return toTextResult(lines.join("\n"));
+          }
+        );
+      }),
+  };
+}
+
+function buildSelectorHint(
+  tagName: string,
+  attrs: { id: unknown; className: unknown; testId: unknown; index: number }
+): string {
+  if (typeof attrs.testId === "string" && attrs.testId) {
+    return `${tagName}[data-testid="${attrs.testId}"]`;
+  }
+  if (typeof attrs.id === "string" && attrs.id) {
+    return `#${attrs.id}`;
+  }
+  if (typeof attrs.className === "string" && attrs.className.trim()) {
+    const firstClass = attrs.className.trim().split(/\s+/)[0];
+    return `${tagName}.${firstClass}[index=${attrs.index}]`;
+  }
+  return `${tagName}[index=${attrs.index}]`;
 }
 
 function createGetElementTool(manager: WeappAutomatorManager): AnyTool {

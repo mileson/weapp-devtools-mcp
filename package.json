@@ -1,6 +1,6 @@
 {
   "name": "weapp-devtools-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A privacy-first MCP server for controlling WeChat Mini Program DevTools.",
   "type": "module",
   "bin": {

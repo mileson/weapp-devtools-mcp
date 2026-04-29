@@ -12,13 +12,15 @@ import {
   type WeappConnectionConfig,
 } from "./config.js";
 import {
+  autoNetworkMonitoringEnabled,
+  maxNetworkLogs,
   redactCliArgs,
   redactText,
   sanitizeForOutput,
   writePrivateFile,
 } from "./security.js";
 
-type ToolLogger = {
+export type ToolLogger = {
   debug: (message: string, data?: SerializableValue) => void;
   info: (message: string, data?: SerializableValue) => void;
   warn: (message: string, data?: SerializableValue) => void;
@@ -37,11 +39,30 @@ export interface ConsoleLogEntry {
   data?: SerializableValue;
 }
 
+export interface NetworkLogEntry {
+  id: string;
+  type: "request" | "uploadFile" | "downloadFile";
+  url: string;
+  method?: string;
+  headers?: SerializableValue;
+  data?: SerializableValue;
+  statusCode?: number;
+  response?: SerializableValue;
+  error?: string;
+  duration?: number;
+  timestamp: string;
+  success: boolean;
+  source?: string;
+}
+
 export class WeappAutomatorManager {
   private miniProgram?: MiniProgramInstance;
   private config?: WeappConnectionConfig;
   private consoleLogs: ConsoleLogEntry[] = [];
   private maxLogs = 1000; // 最多保存1000条日志
+  private networkLogs: NetworkLogEntry[] = [];
+  private networkMonitoring = false;
+  private networkMonitoringInjected = false;
   private pendingProjects: { path: string; name: string }[] = [];
   
   private static readonly CONFIG_FILE = path.join(
@@ -157,6 +178,109 @@ export class WeappAutomatorManager {
 
   clearConsoleLogs(): void {
     this.consoleLogs = [];
+  }
+
+  getNetworkLogs(): NetworkLogEntry[] {
+    return [...this.networkLogs];
+  }
+
+  clearNetworkLogs(): void {
+    this.networkLogs = [];
+  }
+
+  isNetworkMonitoring(): boolean {
+    return this.networkMonitoring;
+  }
+
+  async startNetworkMonitoring(log: ToolLogger, options?: { clear?: boolean }): Promise<void> {
+    if (!this.miniProgram) {
+      throw new UserError("No active Mini Program session. Call mp_ensureConnection first.");
+    }
+
+    if (options?.clear) {
+      this.clearNetworkLogs();
+      await this.clearRemoteNetworkLogs().catch(() => undefined);
+    }
+
+    await this.installNetworkInterceptors(this.miniProgram, log);
+    this.networkMonitoring = true;
+    this.networkMonitoringInjected = true;
+  }
+
+  async stopNetworkMonitoring(
+    log: ToolLogger,
+    options?: { restoreWx?: boolean; clear?: boolean }
+  ): Promise<void> {
+    if (!this.miniProgram) {
+      this.networkMonitoring = false;
+      this.networkMonitoringInjected = false;
+      if (options?.clear) {
+        this.clearNetworkLogs();
+      }
+      return;
+    }
+
+    await this.miniProgram
+      .evaluate(function () {
+        // @ts-expect-error wx exists in the Mini Program runtime.
+        const wxObj = typeof wx !== "undefined" ? wx : null;
+        if (wxObj) {
+          wxObj.__weappDevtoolsMcpNetworkDisabled = true;
+        }
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        log.warn(`Failed to disable remote network monitor: ${message}`);
+      });
+
+    if (options?.restoreWx ?? true) {
+      for (const method of ["request", "uploadFile", "downloadFile"]) {
+        await (this.miniProgram as any)
+          .restoreWxMethod(method)
+          .catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : String(error);
+            log.warn(`Failed to restore wx.${method}: ${message}`);
+          });
+      }
+    }
+
+    if (options?.clear) {
+      this.clearNetworkLogs();
+      await this.clearRemoteNetworkLogs().catch(() => undefined);
+    }
+
+    this.networkMonitoring = false;
+    this.networkMonitoringInjected = false;
+  }
+
+  async syncNetworkLogs(log?: ToolLogger): Promise<number> {
+    if (!this.miniProgram) {
+      return 0;
+    }
+
+    try {
+      const remoteLogs = await this.miniProgram.evaluate(function () {
+        // @ts-expect-error wx exists in the Mini Program runtime.
+        const wxObj = typeof wx !== "undefined" ? wx : null;
+        if (!wxObj || !Array.isArray(wxObj.__weappDevtoolsMcpNetworkLogs)) {
+          return [];
+        }
+        const logs = wxObj.__weappDevtoolsMcpNetworkLogs.slice();
+        wxObj.__weappDevtoolsMcpNetworkLogs = [];
+        return logs;
+      });
+
+      const entries = Array.isArray(remoteLogs)
+        ? remoteLogs.map((entry) => normalizeNetworkLog(entry)).filter(Boolean)
+        : [];
+
+      this.addNetworkLogs(entries as NetworkLogEntry[]);
+      return entries.length;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log?.warn(`Failed to sync network logs: ${message}`);
+      return 0;
+    }
   }
   
   /**
@@ -307,6 +431,12 @@ export class WeappAutomatorManager {
           throw new Error('MiniProgram not initialized');
         }
         this.attachLogging(this.miniProgram, log);
+        if (autoNetworkMonitoringEnabled()) {
+          await this.startNetworkMonitoring(log).catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : String(error);
+            log.warn(`Network monitoring was not started: ${message}`);
+          });
+        }
       } catch (error) {
         this.miniProgram = undefined;
         this.config = undefined;
@@ -376,6 +506,8 @@ export class WeappAutomatorManager {
       this.miniProgram.removeAllListeners();
       this.miniProgram = undefined;
       this.config = undefined;
+      this.networkMonitoring = false;
+      this.networkMonitoringInjected = false;
     }
   }
 
@@ -1000,6 +1132,215 @@ C. 直接输入项目路径`;
     log.info(`DevTools launched with PID: ${proc.pid}`);
   }
 
+  private addNetworkLogs(entries: NetworkLogEntry[]): void {
+    if (!entries.length) {
+      return;
+    }
+    this.networkLogs.push(...entries);
+    const limit = maxNetworkLogs();
+    if (this.networkLogs.length > limit) {
+      this.networkLogs.splice(0, this.networkLogs.length - limit);
+    }
+  }
+
+  private async clearRemoteNetworkLogs(): Promise<number> {
+    if (!this.miniProgram) {
+      return 0;
+    }
+    return await this.miniProgram.evaluate(function () {
+      // @ts-expect-error wx exists in the Mini Program runtime.
+      const wxObj = typeof wx !== "undefined" ? wx : null;
+      if (!wxObj || !Array.isArray(wxObj.__weappDevtoolsMcpNetworkLogs)) {
+        return 0;
+      }
+      const count = wxObj.__weappDevtoolsMcpNetworkLogs.length;
+      wxObj.__weappDevtoolsMcpNetworkLogs = [];
+      return count;
+    });
+  }
+
+  private async installNetworkInterceptors(
+    miniProgram: MiniProgramInstance,
+    log: ToolLogger
+  ): Promise<void> {
+    if (this.networkMonitoringInjected) {
+      await miniProgram
+        .evaluate(function () {
+          // @ts-expect-error wx exists in the Mini Program runtime.
+          const wxObj = typeof wx !== "undefined" ? wx : null;
+          if (wxObj) {
+            wxObj.__weappDevtoolsMcpNetworkDisabled = false;
+          }
+        })
+        .catch(() => undefined);
+      return;
+    }
+
+    await (miniProgram as any).mockWxMethod("request", function (this: any, options: any) {
+      // @ts-expect-error wx exists in the Mini Program runtime.
+      const wxObj = typeof wx !== "undefined" ? wx : null;
+      if (!wxObj || wxObj.__weappDevtoolsMcpNetworkDisabled) {
+        return this.origin(options);
+      }
+      wxObj.__weappDevtoolsMcpNetworkLogs = wxObj.__weappDevtoolsMcpNetworkLogs || [];
+      const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      const startedAt = Date.now();
+      const originalSuccess = options?.success;
+      const originalFail = options?.fail;
+      options.success = function (response: any) {
+        wxObj.__weappDevtoolsMcpNetworkLogs.push({
+          id: requestId,
+          type: "request",
+          url: options?.url,
+          method: options?.method || "GET",
+          headers: options?.header || options?.headers,
+          data: options?.data,
+          statusCode: response?.statusCode,
+          response: response?.data,
+          duration: Date.now() - startedAt,
+          timestamp: new Date().toISOString(),
+          success: true,
+          source: "wx.request",
+        });
+        if (typeof originalSuccess === "function") {
+          return originalSuccess.call(this, response);
+        }
+        return undefined;
+      };
+      options.fail = function (error: any) {
+        wxObj.__weappDevtoolsMcpNetworkLogs.push({
+          id: requestId,
+          type: "request",
+          url: options?.url,
+          method: options?.method || "GET",
+          headers: options?.header || options?.headers,
+          data: options?.data,
+          error: error?.errMsg || error?.message || String(error),
+          duration: Date.now() - startedAt,
+          timestamp: new Date().toISOString(),
+          success: false,
+          source: "wx.request",
+        });
+        if (typeof originalFail === "function") {
+          return originalFail.call(this, error);
+        }
+        return undefined;
+      };
+      return this.origin(options);
+    });
+
+    await (miniProgram as any).mockWxMethod("uploadFile", function (this: any, options: any) {
+        // @ts-expect-error wx exists in the Mini Program runtime.
+        const wxObj = typeof wx !== "undefined" ? wx : null;
+        if (!wxObj || wxObj.__weappDevtoolsMcpNetworkDisabled) {
+          return this.origin(options);
+        }
+        wxObj.__weappDevtoolsMcpNetworkLogs = wxObj.__weappDevtoolsMcpNetworkLogs || [];
+        const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        const startedAt = Date.now();
+        const originalSuccess = options?.success;
+        const originalFail = options?.fail;
+        options.success = function (response: any) {
+          wxObj.__weappDevtoolsMcpNetworkLogs.push({
+            id: requestId,
+            type: "uploadFile",
+            url: options?.url,
+            headers: options?.header || options?.headers,
+            statusCode: response?.statusCode,
+            response: response?.data,
+            duration: Date.now() - startedAt,
+            timestamp: new Date().toISOString(),
+            success: true,
+            source: "wx.uploadFile",
+          });
+          if (typeof originalSuccess === "function") {
+            return originalSuccess.call(this, response);
+          }
+          return undefined;
+        };
+        options.fail = function (error: any) {
+          wxObj.__weappDevtoolsMcpNetworkLogs.push({
+            id: requestId,
+            type: "uploadFile",
+            url: options?.url,
+            headers: options?.header || options?.headers,
+            error: error?.errMsg || error?.message || String(error),
+            duration: Date.now() - startedAt,
+            timestamp: new Date().toISOString(),
+            success: false,
+            source: "wx.uploadFile",
+          });
+          if (typeof originalFail === "function") {
+            return originalFail.call(this, error);
+          }
+          return undefined;
+        };
+        return this.origin(options);
+      });
+
+    await (miniProgram as any).mockWxMethod("downloadFile", function (this: any, options: any) {
+      // @ts-expect-error wx exists in the Mini Program runtime.
+      const wxObj = typeof wx !== "undefined" ? wx : null;
+      if (!wxObj || wxObj.__weappDevtoolsMcpNetworkDisabled) {
+        return this.origin(options);
+      }
+      wxObj.__weappDevtoolsMcpNetworkLogs = wxObj.__weappDevtoolsMcpNetworkLogs || [];
+      const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      const startedAt = Date.now();
+      const originalSuccess = options?.success;
+      const originalFail = options?.fail;
+      options.success = function (response: any) {
+        wxObj.__weappDevtoolsMcpNetworkLogs.push({
+          id: requestId,
+          type: "downloadFile",
+          url: options?.url,
+          headers: options?.header || options?.headers,
+          statusCode: response?.statusCode,
+          response: response?.data,
+          duration: Date.now() - startedAt,
+          timestamp: new Date().toISOString(),
+          success: true,
+          source: "wx.downloadFile",
+        });
+        if (typeof originalSuccess === "function") {
+          return originalSuccess.call(this, response);
+        }
+        return undefined;
+      };
+      options.fail = function (error: any) {
+        wxObj.__weappDevtoolsMcpNetworkLogs.push({
+          id: requestId,
+          type: "downloadFile",
+          url: options?.url,
+          headers: options?.header || options?.headers,
+          error: error?.errMsg || error?.message || String(error),
+          duration: Date.now() - startedAt,
+          timestamp: new Date().toISOString(),
+          success: false,
+          source: "wx.downloadFile",
+        });
+        if (typeof originalFail === "function") {
+          return originalFail.call(this, error);
+        }
+        return undefined;
+      };
+      return this.origin(options);
+    });
+
+    await miniProgram
+      .evaluate(function () {
+        // @ts-expect-error wx exists in the Mini Program runtime.
+        const wxObj = typeof wx !== "undefined" ? wx : null;
+        if (wxObj) {
+          wxObj.__weappDevtoolsMcpNetworkLogs = wxObj.__weappDevtoolsMcpNetworkLogs || [];
+          wxObj.__weappDevtoolsMcpNetworkDisabled = false;
+        }
+      })
+      .catch(() => undefined);
+
+    log.debug("Network monitoring interceptors installed");
+  }
+
   private attachLogging(miniProgram: MiniProgramInstance, log: ToolLogger) {
     miniProgram.on("console", (event: unknown) => {
       const serialized = sanitizeForOutput(toSerializable(event)) as SerializableValue;
@@ -1065,6 +1406,47 @@ function toSerializable(value: unknown): SerializableValue {
     return Object.fromEntries(entries) as SerializableValue;
   }
   return String(value) as SerializableValue;
+}
+
+function normalizeNetworkLog(value: unknown): NetworkLogEntry | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const entry = value as Record<string, unknown>;
+  const type = entry.type;
+  const url = entry.url;
+  if (
+    (type !== "request" && type !== "uploadFile" && type !== "downloadFile") ||
+    typeof url !== "string" ||
+    !url
+  ) {
+    return null;
+  }
+
+  const id =
+    typeof entry.id === "string" && entry.id
+      ? entry.id
+      : `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+  return sanitizeForOutput({
+    id,
+    type,
+    url,
+    method: typeof entry.method === "string" ? entry.method : undefined,
+    headers: toSerializable(entry.headers),
+    data: toSerializable(entry.data),
+    statusCode: typeof entry.statusCode === "number" ? entry.statusCode : undefined,
+    response: toSerializable(entry.response),
+    error: typeof entry.error === "string" ? entry.error : undefined,
+    duration: typeof entry.duration === "number" ? entry.duration : undefined,
+    timestamp:
+      typeof entry.timestamp === "string"
+        ? entry.timestamp
+        : new Date().toISOString(),
+    success: entry.success === true,
+    source: typeof entry.source === "string" ? entry.source : undefined,
+  }) as NetworkLogEntry;
 }
 
 function isSameConfig(
