@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Audit
+        run: npm audit --omit=dev
+
+      - name: Pack
+        run: npm pack
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          NOTES="docs/releases/${TAG_NAME}.md"
+          if [ ! -f "$NOTES" ]; then
+            NOTES="docs/releases/v0.1.0.md"
+          fi
+          gh release create "$TAG_NAME" ./*.tgz --notes-file "$NOTES" --title "$TAG_NAME"

@@ -1,0 +1,69 @@
+{
+  "name": "weapp-devtools-mcp",
+  "version": "0.1.0",
+  "description": "A privacy-first MCP server for controlling WeChat Mini Program DevTools.",
+  "type": "module",
+  "bin": {
+    "weapp-devtools-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "node --import tsx src/index.ts",
+    "start": "node dist/index.js",
+    "prepare": "npm run build",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "wechat",
+    "mini-program",
+    "automation",
+    "devtools",
+    "privacy"
+  ],
+  "author": "Mileson",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mileson/weapp-devtools-mcp.git"
+  },
+  "homepage": "https://github.com/Mileson/weapp-devtools-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/Mileson/weapp-devtools-mcp/issues"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README_CN.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md",
+    ".env.example",
+    "docs"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "fastmcp": "^3.34.0",
+    "miniprogram-automator": "^0.12.1",
+    "zod": "^4.3.6"
+  },
+  "overrides": {
+    "@hono/node-server": "^1.19.14",
+    "axios": "^1.15.2",
+    "follow-redirects": "^1.16.0",
+    "hono": "^4.12.15",
+    "jpeg-js": "^0.4.4",
+    "mkdirp": {
+      "minimist": "^0.2.4"
+    },
+    "phin": "^3.7.1"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/inspector": "^0.21.1",
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}
