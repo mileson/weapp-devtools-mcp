@@ -1,6 +1,6 @@
 {
   "name": "weapp-devtools-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A privacy-first MCP server for controlling WeChat Mini Program DevTools.",
   "type": "module",
   "bin": {
@@ -51,14 +51,17 @@
   },
   "overrides": {
     "@hono/node-server": "^1.19.14",
-    "axios": "^1.15.2",
+    "axios": "^1.17.0",
+    "fast-uri": "^3.1.2",
     "follow-redirects": "^1.16.0",
-    "hono": "^4.12.15",
+    "hono": "^4.12.23",
+    "ip-address": "^10.2.0",
     "jpeg-js": "^0.4.4",
     "mkdirp": {
       "minimist": "^0.2.4"
     },
-    "phin": "^3.7.1"
+    "phin": "^3.7.1",
+    "qs": "^6.15.2"
   },
   "devDependencies": {
     "@modelcontextprotocol/inspector": "^0.21.1",

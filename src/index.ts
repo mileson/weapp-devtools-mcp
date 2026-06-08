@@ -12,7 +12,7 @@ const manager = new WeappAutomatorManager();
 
 const server = new FastMCP({
   name: "weapp-devtools-mcp",
-  version: "0.2.0",
+  version: "0.2.1",
   instructions:
     "Controls WeChat Mini Program projects through WeChat DevTools using miniprogram-automator. Call mp_ensureConnection before mp_screenshot, page_*, element_*, network, evaluate, mock, or CLI tools. If connection fails, prefer one guided retry with reconnect=true. Some powerful local-only capabilities require riskConsent=true or WEAPP_ALLOW_* environment variables.",
 });

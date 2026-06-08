@@ -23,6 +23,13 @@ WeApp DevTools MCP 将 MCP 客户端连接到本机微信开发者工具自动�
 - 通过 npm `overrides` 固定存在漏洞的传递依赖版本。
 - 兼容支持 stdio MCP server 的客户端。
 
+## 技术栈
+
+- TypeScript + Node.js 18+，用于本地 stdio MCP 服务。
+- `fastmcp` 与 `@modelcontextprotocol/sdk`，负责 MCP 传输和工具注册。
+- `miniprogram-automator` 配合官方微信开发者工具 CLI，负责本地自动化。
+- `zod` 配合默认脱敏策略，负责连接参数解析、安全校验和输出限制。
+
 ## 快速开始
 
 ### 前置条件
@@ -135,10 +142,16 @@ WEAPP_WS_ENDPOINT=ws://localhost:9420 node dist/index.js
 
 - `WEAPP_WS_ENDPOINT`：已运行的开发者工具自动化 WebSocket 地址，推荐 `ws://localhost:9420`。
 - `WEAPP_AUTOMATOR_MODE`：`connect` 或 `launch`。
+- `WEAPP_AUTO_ACCOUNT`：本地启动开发者工具时可选的账号名。
+- `WEAPP_DEVTOOLS_TICKET`：受控本地启动时可选的开发者工具 ticket。
 - `WEAPP_PROJECT_PATH`：小程序项目路径。
 - `WECHAT_DEVTOOLS_CLI_PATH`：开发者工具 CLI 路径。
 - `WEAPP_DEVTOOLS_PORT`：自动化端口。
 - `WEAPP_AUTOLAUNCH`：设为 `true` 后自动启动开发者工具。
+- `WEAPP_AUTOCLOSE`：设为 `true` 后，在断开连接时自动关闭启动出的开发者工具。
+- `WEAPP_TRUST_PROJECT`：设为 `true` 后，在启动流程中信任目标项目。
+- `WEAPP_DEVTOOLS_CWD`：本地开发者工具启动命令的工作目录。
+- `WEAPP_DEVTOOLS_ARGS`：额外的开发者工具启动参数，按空白分割。
 - `WEAPP_DEVTOOLS_TIMEOUT`、`WEAPP_LAUNCH_TIMEOUT`、`WEAPP_CONNECT_TIMEOUT`：超时控制。
 
 隐私相关：
@@ -185,6 +198,12 @@ npm ci
 npm run build
 npm audit --omit=dev
 ```
+
+## 发布
+
+- 最新发布说明：[v0.2.1](docs/releases/v0.2.1.md)、[v0.2.0](docs/releases/v0.2.0.md)、[v0.1.0](docs/releases/v0.1.0.md)
+- 推送 `v*` tag 后会触发 GitHub Actions release workflow，打包 npm tarball 并创建对应 GitHub Release。
+- 在打公开版本 tag 前，先同步 README、`.env.example` 和 `docs/releases/`。
 
 ## 贡献
 

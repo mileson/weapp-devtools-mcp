@@ -23,6 +23,13 @@ WeApp DevTools MCP connects an MCP client to a local WeChat Mini Program DevTool
 - Patch vulnerable transitive dependency versions through npm `overrides`.
 - Works with any MCP client that supports stdio servers.
 
+## Tech Stack
+
+- TypeScript and Node.js 18+ for a local stdio MCP server.
+- `fastmcp` and `@modelcontextprotocol/sdk` for MCP transport and tool registration.
+- `miniprogram-automator` plus the official WeChat DevTools CLI for local automation.
+- `zod` plus a redaction-first policy for connection parsing, safety checks, and output limits.
+
 ## Quick Start
 
 ### Prerequisites
@@ -135,10 +142,16 @@ Connection:
 
 - `WEAPP_WS_ENDPOINT`: WebSocket endpoint for a running DevTools automation service. Recommended: `ws://localhost:9420`.
 - `WEAPP_AUTOMATOR_MODE`: `connect` or `launch`.
+- `WEAPP_AUTO_ACCOUNT`: optional DevTools account name when launching locally.
+- `WEAPP_DEVTOOLS_TICKET`: optional DevTools launch ticket for a controlled local session.
 - `WEAPP_PROJECT_PATH`: Mini Program project path.
 - `WECHAT_DEVTOOLS_CLI_PATH`: DevTools CLI path.
 - `WEAPP_DEVTOOLS_PORT`: preferred automation port.
 - `WEAPP_AUTOLAUNCH`: set to `true` to launch DevTools automatically.
+- `WEAPP_AUTOCLOSE`: set to `true` to close the launched DevTools session on disconnect.
+- `WEAPP_TRUST_PROJECT`: set to `true` to trust the target project during launch flows.
+- `WEAPP_DEVTOOLS_CWD`: working directory for local DevTools launch commands.
+- `WEAPP_DEVTOOLS_ARGS`: extra DevTools launch arguments split on whitespace.
 - `WEAPP_DEVTOOLS_TIMEOUT`, `WEAPP_LAUNCH_TIMEOUT`, `WEAPP_CONNECT_TIMEOUT`: timeout controls.
 
 Privacy:
@@ -185,6 +198,12 @@ npm ci
 npm run build
 npm audit --omit=dev
 ```
+
+## Release
+
+- Latest notes: [v0.2.1](docs/releases/v0.2.1.md), [v0.2.0](docs/releases/v0.2.0.md), [v0.1.0](docs/releases/v0.1.0.md)
+- Push a `v*` tag to trigger the GitHub Actions release workflow, pack the npm tarball, and publish the matching GitHub Release.
+- Keep README, `.env.example`, and `docs/releases/` aligned before tagging a public version.
 
 ## Contributing
 
