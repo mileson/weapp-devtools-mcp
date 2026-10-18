@@ -10,6 +10,10 @@
 
 WeApp DevTools MCP connects an MCP client to a local WeChat Mini Program DevTools automation endpoint. It lets an agent navigate pages, inspect elements, collect logs, capture screenshots, monitor network requests, mock `wx` APIs, run local scripts, and call the official DevTools CLI without a hosted relay service.
 
+[Features](#readme-section-1) · [Quick Start](#readme-section-2) · [Environment Variables](#readme-section-3) · [Tech Stack](#readme-section-4) · [Tools](#readme-section-5) · [Project Structure](#readme-section-6) · [Development](#readme-section-7)
+
+<a id="readme-section-1"></a>
+
 ## Features
 
 - Control Mini Program pages through local WeChat DevTools automation.
@@ -23,12 +27,7 @@ WeApp DevTools MCP connects an MCP client to a local WeChat Mini Program DevTool
 - Patch vulnerable transitive dependency versions through npm `overrides`.
 - Works with any MCP client that supports stdio servers.
 
-## Tech Stack
-
-- TypeScript and Node.js 18+ for a local stdio MCP server.
-- `fastmcp` and `@modelcontextprotocol/sdk` for MCP transport and tool registration.
-- `miniprogram-automator` plus the official WeChat DevTools CLI for local automation.
-- `zod` plus a redaction-first policy for connection parsing, safety checks, and output limits.
+<a id="readme-section-2"></a>
 
 ## Quick Start
 
@@ -85,56 +84,7 @@ npm run build
 WEAPP_WS_ENDPOINT=ws://localhost:9420 node dist/index.js
 ```
 
-## Tools
-
-Application tools:
-
-- `mp_ensureConnection`: verify the automation session and current page.
-- `mp_navigate`: navigate with `navigateTo`, `redirectTo`, `reLaunch`, `switchTab`, or `navigateBack`.
-- `mp_screenshot`: capture the current viewport. Saves locally by default.
-- `mp_callWx`: call Mini Program `wx` methods; high-risk methods require `riskConsent` or an allow switch.
-- `mp_getLogs`: read captured console logs.
-- `mp_currentPage`: inspect current route, query, size, scroll position, and optional data.
-- `mp_listProjects`: list recent projects discovered from local DevTools data.
-- `mp_setDefaultProject`: store a default local project path.
-
-Page tools:
-
-- `page_snapshot`, `page_getElement`, `page_getElements`, `page_waitElement`, `page_waitTimeout`
-- `page_getData`, `page_setData`, `page_callMethod`
-
-Element tools:
-
-- `element_tap`, `element_input`, `element_callMethod`
-- `element_getData`, `element_setData`
-- `element_getInnerElement`, `element_getInnerElements`
-- `element_getWxml`, `element_getStyles`
-- `element_scrollTo`, `element_getAttributes`, `element_getBoundingClientRect`
-
-Network and debugging tools:
-
-- `mp_startNetwork`, `mp_stopNetwork`, `mp_getNetworkRequests`, `mp_getNetworkRequest`, `mp_clearNetworkRequests`
-- `assert_element`: assert existence, text, value, attributes, and visibility by selector.
-- `mp_toolConfig`: inspect the active tool profile and high-risk capability switches.
-
-Runtime and CLI tools:
-
-- `mp_evaluate`: run a function in the Mini Program runtime.
-- `mp_mockWx`, `mp_restoreWx`: mock or restore `wx` methods.
-- `mp_runCli`: run the local WeChat DevTools CLI without shell expansion.
-
-## Privacy Defaults
-
-The server is designed to avoid accidental data leakage in agent transcripts:
-
-- Text and JSON outputs are redacted by default.
-- `element_input` does not echo typed values.
-- Screenshots are saved to local temp files unless inline screenshots are explicitly enabled.
-- High-risk `wx`, evaluate, mock, and CLI capabilities require per-call consent or explicit environment switches.
-- DevTools launch logs redact account and ticket arguments.
-- Local MCP config is written with `0600` permissions.
-
-For the full model and escape hatches, see [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md).
+<a id="readme-section-3"></a>
 
 ## Environment Variables
 
@@ -176,6 +126,57 @@ Tool surface:
 - `WEAPP_ENABLE_NETWORK_MONITORING=false`: disable automatic network interception.
 - `WEAPP_MAX_NETWORK_LOGS`: network log retention limit.
 
+<a id="readme-section-4"></a>
+
+## Tech Stack
+
+- TypeScript and Node.js 18+ for a local stdio MCP server.
+- `fastmcp` and `@modelcontextprotocol/sdk` for MCP transport and tool registration.
+- `miniprogram-automator` plus the official WeChat DevTools CLI for local automation.
+- `zod` plus a redaction-first policy for connection parsing, safety checks, and output limits.
+
+<a id="readme-section-5"></a>
+
+## Tools
+
+Application tools:
+
+- `mp_ensureConnection`: verify the automation session and current page.
+- `mp_navigate`: navigate with `navigateTo`, `redirectTo`, `reLaunch`, `switchTab`, or `navigateBack`.
+- `mp_screenshot`: capture the current viewport. Saves locally by default.
+- `mp_callWx`: call Mini Program `wx` methods; high-risk methods require `riskConsent` or an allow switch.
+- `mp_getLogs`: read captured console logs.
+- `mp_currentPage`: inspect current route, query, size, scroll position, and optional data.
+- `mp_listProjects`: list recent projects discovered from local DevTools data.
+- `mp_setDefaultProject`: store a default local project path.
+
+Page tools:
+
+- `page_snapshot`, `page_getElement`, `page_getElements`, `page_waitElement`, `page_waitTimeout`
+- `page_getData`, `page_setData`, `page_callMethod`
+
+Element tools:
+
+- `element_tap`, `element_input`, `element_callMethod`
+- `element_getData`, `element_setData`
+- `element_getInnerElement`, `element_getInnerElements`
+- `element_getWxml`, `element_getStyles`
+- `element_scrollTo`, `element_getAttributes`, `element_getBoundingClientRect`
+
+Network and debugging tools:
+
+- `mp_startNetwork`, `mp_stopNetwork`, `mp_getNetworkRequests`, `mp_getNetworkRequest`, `mp_clearNetworkRequests`
+- `assert_element`: assert existence, text, value, attributes, and visibility by selector.
+- `mp_toolConfig`: inspect the active tool profile and high-risk capability switches.
+
+Runtime and CLI tools:
+
+- `mp_evaluate`: run a function in the Mini Program runtime.
+- `mp_mockWx`, `mp_restoreWx`: mock or restore `wx` methods.
+- `mp_runCli`: run the local WeChat DevTools CLI without shell expansion.
+
+<a id="readme-section-6"></a>
+
 ## Project Structure
 
 ```text
@@ -191,6 +192,8 @@ docs/
   releases/             Release notes
 ```
 
+<a id="readme-section-7"></a>
+
 ## Development
 
 ```bash
@@ -199,23 +202,48 @@ npm run build
 npm audit --omit=dev
 ```
 
+<a id="readme-section-8"></a>
+
 ## Release
 
 - Latest notes: [v0.2.1](docs/releases/v0.2.1.md), [v0.2.0](docs/releases/v0.2.0.md), [v0.1.0](docs/releases/v0.1.0.md)
 - Push a `v*` tag to trigger the GitHub Actions release workflow, pack the npm tarball, and publish the matching GitHub Release.
 - Keep README, `.env.example`, and `docs/releases/` aligned before tagging a public version.
 
-## Contributing
+<a id="readme-section-9"></a>
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+## Privacy Defaults
+
+The server is designed to avoid accidental data leakage in agent transcripts:
+
+- Text and JSON outputs are redacted by default.
+- `element_input` does not echo typed values.
+- Screenshots are saved to local temp files unless inline screenshots are explicitly enabled.
+- High-risk `wx`, evaluate, mock, and CLI capabilities require per-call consent or explicit environment switches.
+- DevTools launch logs redact account and ticket arguments.
+- Local MCP config is written with `0600` permissions.
+
+For the full model and escape hatches, see [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md).
+
+<a id="readme-section-10"></a>
 
 ## Security
 
 Please do not open public issues for suspected security problems. See [SECURITY.md](SECURITY.md).
 
+<a id="readme-section-11"></a>
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+<a id="readme-section-12"></a>
+
 ## License
 
 MIT. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+<a id="readme-section-13"></a>
 
 ## Author
 
