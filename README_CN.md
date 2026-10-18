@@ -10,6 +10,10 @@
 
 WeApp DevTools MCP 将 MCP 客户端连接到本机微信开发者工具自动化端口。AI 助手可以导航小程序页面、检查元素、读取日志、截图、监听网络、mock `wx` API、运行本地调试脚本，并调用本机开发者工具 CLI；全程不需要托管中转服务。
 
+[功能特性](#readme-section-1) · [快速开始](#readme-section-2) · [环境变量](#readme-section-3) · [工具列表](#readme-section-4) · [技术栈](#readme-section-5) · [项目结构](#readme-section-6) · [仓库导航](#readme-section-7)
+
+<a id="readme-section-1"></a>
+
 ## 功能特性
 
 - 通过本机微信开发者工具自动化能力控制小程序。
@@ -23,12 +27,7 @@ WeApp DevTools MCP 将 MCP 客户端连接到本机微信开发者工具自动�
 - 通过 npm `overrides` 固定存在漏洞的传递依赖版本。
 - 兼容支持 stdio MCP server 的客户端。
 
-## 技术栈
-
-- TypeScript + Node.js 18+，用于本地 stdio MCP 服务。
-- `fastmcp` 与 `@modelcontextprotocol/sdk`，负责 MCP 传输和工具注册。
-- `miniprogram-automator` 配合官方微信开发者工具 CLI，负责本地自动化。
-- `zod` 配合默认脱敏策略，负责连接参数解析、安全校验和输出限制。
+<a id="readme-section-2"></a>
 
 ## 快速开始
 
@@ -85,56 +84,7 @@ npm run build
 WEAPP_WS_ENDPOINT=ws://localhost:9420 node dist/index.js
 ```
 
-## 工具列表
-
-应用工具：
-
-- `mp_ensureConnection`：确认自动化会话和当前页面。
-- `mp_navigate`：支持 `navigateTo`、`redirectTo`、`reLaunch`、`switchTab`、`navigateBack`。
-- `mp_screenshot`：截图，默认保存到本地临时文件。
-- `mp_callWx`：调用小程序 `wx` 方法；高风险方法需要 `riskConsent` 或显式允许开关。
-- `mp_getLogs`：读取捕获到的控制台日志。
-- `mp_currentPage`：查看当前路由、参数、尺寸、滚动位置和可选页面数据。
-- `mp_listProjects`：从本机开发者工具数据中列出最近项目。
-- `mp_setDefaultProject`：保存默认本地项目路径。
-
-页面工具：
-
-- `page_snapshot`、`page_getElement`、`page_getElements`、`page_waitElement`、`page_waitTimeout`
-- `page_getData`、`page_setData`、`page_callMethod`
-
-元素工具：
-
-- `element_tap`、`element_input`、`element_callMethod`
-- `element_getData`、`element_setData`
-- `element_getInnerElement`、`element_getInnerElements`
-- `element_getWxml`、`element_getStyles`
-- `element_scrollTo`、`element_getAttributes`、`element_getBoundingClientRect`
-
-网络与调试工具：
-
-- `mp_startNetwork`、`mp_stopNetwork`、`mp_getNetworkRequests`、`mp_getNetworkRequest`、`mp_clearNetworkRequests`
-- `assert_element`：按选择器断言存在、文本、值、属性和可见状态。
-- `mp_toolConfig`：查看当前工具 profile 和高风险能力开关。
-
-运行时与 CLI 工具：
-
-- `mp_evaluate`：在小程序运行时执行函数。
-- `mp_mockWx`、`mp_restoreWx`：mock 或恢复 `wx` 方法。
-- `mp_runCli`：调用本机微信开发者工具 CLI，不经过 shell 展开。
-
-## 隐私默认值
-
-为了减少数据进入对话上下文的机会，服务默认：
-
-- 脱敏文本和 JSON 输出。
-- `element_input` 不回显输入值。
-- 截图保存到本地文件，除非显式允许内联图片。
-- 高风险 `wx`、evaluate、mock 和 CLI 能力需要单次同意或显式环境变量。
-- 开发者工具启动日志会隐藏账号和 ticket 参数。
-- 本地 MCP 配置文件使用 `0600` 权限写入。
-
-完整说明见 [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md)。
+<a id="readme-section-3"></a>
 
 ## 环境变量
 
@@ -176,6 +126,57 @@ WEAPP_WS_ENDPOINT=ws://localhost:9420 node dist/index.js
 - `WEAPP_ENABLE_NETWORK_MONITORING=false`：关闭自动网络监听。
 - `WEAPP_MAX_NETWORK_LOGS`：网络日志保留数量。
 
+<a id="readme-section-4"></a>
+
+## 工具列表
+
+应用工具：
+
+- `mp_ensureConnection`：确认自动化会话和当前页面。
+- `mp_navigate`：支持 `navigateTo`、`redirectTo`、`reLaunch`、`switchTab`、`navigateBack`。
+- `mp_screenshot`：截图，默认保存到本地临时文件。
+- `mp_callWx`：调用小程序 `wx` 方法；高风险方法需要 `riskConsent` 或显式允许开关。
+- `mp_getLogs`：读取捕获到的控制台日志。
+- `mp_currentPage`：查看当前路由、参数、尺寸、滚动位置和可选页面数据。
+- `mp_listProjects`：从本机开发者工具数据中列出最近项目。
+- `mp_setDefaultProject`：保存默认本地项目路径。
+
+页面工具：
+
+- `page_snapshot`、`page_getElement`、`page_getElements`、`page_waitElement`、`page_waitTimeout`
+- `page_getData`、`page_setData`、`page_callMethod`
+
+元素工具：
+
+- `element_tap`、`element_input`、`element_callMethod`
+- `element_getData`、`element_setData`
+- `element_getInnerElement`、`element_getInnerElements`
+- `element_getWxml`、`element_getStyles`
+- `element_scrollTo`、`element_getAttributes`、`element_getBoundingClientRect`
+
+网络与调试工具：
+
+- `mp_startNetwork`、`mp_stopNetwork`、`mp_getNetworkRequests`、`mp_getNetworkRequest`、`mp_clearNetworkRequests`
+- `assert_element`：按选择器断言存在、文本、值、属性和可见状态。
+- `mp_toolConfig`：查看当前工具 profile 和高风险能力开关。
+
+运行时与 CLI 工具：
+
+- `mp_evaluate`：在小程序运行时执行函数。
+- `mp_mockWx`、`mp_restoreWx`：mock 或恢复 `wx` 方法。
+- `mp_runCli`：调用本机微信开发者工具 CLI，不经过 shell 展开。
+
+<a id="readme-section-5"></a>
+
+## 技术栈
+
+- TypeScript + Node.js 18+，用于本地 stdio MCP 服务。
+- `fastmcp` 与 `@modelcontextprotocol/sdk`，负责 MCP 传输和工具注册。
+- `miniprogram-automator` 配合官方微信开发者工具 CLI，负责本地自动化。
+- `zod` 配合默认脱敏策略，负责连接参数解析、安全校验和输出限制。
+
+<a id="readme-section-6"></a>
+
 ## 项目结构
 
 ```text
@@ -191,6 +192,18 @@ docs/
   releases/             发布说明
 ```
 
+<a id="readme-section-7"></a>
+
+## 仓库导航
+
+| 入口 | 内容 |
+| --- | --- |
+| [`docs/`](docs/) | 项目说明与参考文档 |
+| [`package.json`](package.json) | 依赖、开发与验证命令 |
+| [`src/`](src/) | 应用或服务实现 |
+
+<a id="readme-section-8"></a>
+
 ## 开发
 
 ```bash
@@ -199,23 +212,48 @@ npm run build
 npm audit --omit=dev
 ```
 
+<a id="readme-section-9"></a>
+
 ## 发布
 
 - 最新发布说明：[v0.2.1](docs/releases/v0.2.1.md)、[v0.2.0](docs/releases/v0.2.0.md)、[v0.1.0](docs/releases/v0.1.0.md)
 - 推送 `v*` tag 后会触发 GitHub Actions release workflow，打包 npm tarball 并创建对应 GitHub Release。
 - 在打公开版本 tag 前，先同步 README、`.env.example` 和 `docs/releases/`。
 
-## 贡献
+<a id="readme-section-10"></a>
 
-见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+## 隐私默认值
+
+为了减少数据进入对话上下文的机会，服务默认：
+
+- 脱敏文本和 JSON 输出。
+- `element_input` 不回显输入值。
+- 截图保存到本地文件，除非显式允许内联图片。
+- 高风险 `wx`、evaluate、mock 和 CLI 能力需要单次同意或显式环境变量。
+- 开发者工具启动日志会隐藏账号和 ticket 参数。
+- 本地 MCP 配置文件使用 `0600` 权限写入。
+
+完整说明见 [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md)。
+
+<a id="readme-section-11"></a>
 
 ## 安全
 
 如发现疑似安全问题，请不要发公开 issue。见 [SECURITY.md](SECURITY.md)。
 
+<a id="readme-section-12"></a>
+
+## 贡献
+
+见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+<a id="readme-section-13"></a>
+
 ## 许可证
 
 MIT。见 [LICENSE](LICENSE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+<a id="readme-section-14"></a>
 
 ## 作者
 
