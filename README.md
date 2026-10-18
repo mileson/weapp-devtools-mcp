@@ -1,20 +1,39 @@
-# WeApp DevTools MCP
+<a id="weapp-devtools-mcp"></a>
 
-> 面向 AI 编程助手的微信小程序开发者工具 MCP 服务，默认更注重隐私与数据最小化。
+<div align="center">
 
+# WeApp DevTools MCP · 小程序开发工具接入
+
+**让 AI 编程助手连接微信开发者工具执行开发与验证任务。**
+
+开发工具连接 · 页面操作 · 调试能力 · 隐私默认值
+
+[![中文说明](https://img.shields.io/badge/%E8%AF%B4%E6%98%8E-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-059669)](#readme-detail-16)
+[![项目类型](https://img.shields.io/badge/%E9%A1%B9%E7%9B%AE-MCP-6366f1)](#readme-detail-16)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/MCP-stdio-111827)](https://modelcontextprotocol.io/)
+
+[✨ 核心特性](#readme-detail-16) · [✅ 适用场景](#readme-detail-audience) · [🚀 快速开始](#readme-detail-18) · [🧩 工具列表](#readme-detail-22) · [🔒 隐私默认值](#readme-detail-34) · [⚙️ 环境变量](#readme-detail-20)
+
+</div>
+
+---
+
+> 面向 AI 编程助手的微信小程序开发者工具 MCP 服务，默认更注重隐私与数据最小化。
+
 
 
 
 WeApp DevTools MCP 将 MCP 客户端连接到本机微信开发者工具自动化端口。AI 助手可以导航小程序页面、检查元素、读取日志、截图、监听网络、mock `wx` API、运行本地调试脚本，并调用本机开发者工具 CLI；全程不需要托管中转服务。
 
-[功能特性](#readme-section-1) · [快速开始](#readme-section-2) · [环境变量](#readme-section-3) · [工具列表](#readme-section-4) · [技术栈](#readme-section-5) · [项目结构](#readme-section-6) · [仓库导航](#readme-section-7)
-
 <a id="readme-section-1"></a>
 
-## 功能特性
+<a id="功能特性"></a>
+
+<a id="readme-detail-16"></a>
+
+## ✨ 核心特性
 
 - 通过本机微信开发者工具自动化能力控制小程序。
 - 支持导航、点击、输入、元素检查、页面/组件数据读取、截图和紧凑页面快照。
@@ -27,9 +46,21 @@ WeApp DevTools MCP 将 MCP 客户端连接到本机微信开发者工具自动�
 - 通过 npm `overrides` 固定存在漏洞的传递依赖版本。
 - 兼容支持 stdio MCP server 的客户端。
 
+<a id="readme-detail-audience"></a>
+
+## ✅ 适用场景
+
+适合使用 AI 编程助手维护微信小程序的开发者。
+
 <a id="readme-section-2"></a>
 
-## 快速开始
+<a id="快速开始"></a>
+
+<a id="readme-detail-18"></a>
+
+## 🚀 快速开始
+
+从下面的现有入口开始，按顺序准备环境、配置并完成首次运行。
 
 ### 前置条件
 
@@ -86,7 +117,11 @@ WEAPP_WS_ENDPOINT=ws://localhost:9420 node dist/index.js
 
 <a id="readme-section-3"></a>
 
-## 环境变量
+<a id="环境变量"></a>
+
+<a id="readme-detail-20"></a>
+
+## ⚙️ 环境变量
 
 连接相关：
 
@@ -128,7 +163,11 @@ WEAPP_WS_ENDPOINT=ws://localhost:9420 node dist/index.js
 
 <a id="readme-section-4"></a>
 
-## 工具列表
+<a id="工具列表"></a>
+
+<a id="readme-detail-22"></a>
+
+## 🧩 工具列表
 
 应用工具：
 
@@ -168,7 +207,13 @@ WEAPP_WS_ENDPOINT=ws://localhost:9420 node dist/index.js
 
 <a id="readme-section-5"></a>
 
-## 技术栈
+<a id="技术栈"></a>
+
+<a id="readme-detail-24"></a>
+
+## 🏗️ 技术栈
+
+WeApp DevTools MCP 的实现按下列技术与模块组织，接入和维护时可据此定位。
 
 - TypeScript + Node.js 18+，用于本地 stdio MCP 服务。
 - `fastmcp` 与 `@modelcontextprotocol/sdk`，负责 MCP 传输和工具注册。
@@ -177,7 +222,13 @@ WEAPP_WS_ENDPOINT=ws://localhost:9420 node dist/index.js
 
 <a id="readme-section-6"></a>
 
-## 项目结构
+<a id="项目结构"></a>
+
+<a id="readme-detail-26"></a>
+
+## 📁 项目结构
+
+下面按实现职责列出目录位置，便于把修改放回对应模块。
 
 ```text
 src/
@@ -194,17 +245,27 @@ docs/
 
 <a id="readme-section-7"></a>
 
-## 仓库导航
+<a id="仓库导航"></a>
 
-| 入口 | 内容 |
-| --- | --- |
-| [`docs/`](docs/) | 项目说明与参考文档 |
-| [`package.json`](package.json) | 依赖、开发与验证命令 |
-| [`src/`](src/) | 应用或服务实现 |
+<a id="readme-detail-28"></a>
+
+## 🧩 模块速查
+
+按要处理的工作选择入口，先看模块职责，再进入对应文件或目录。
+
+| 模块入口 | 负责什么 | 什么时候看 |
+| --- | --- | --- |
+| [`docs/`](docs/) | 项目说明与参考文档 | 查阅运行、设计与维护约定 |
+| [`package.json`](package.json) | 依赖、开发与验证命令 | 核对依赖、工程目标与现有命令 |
+| [`src/`](src/) | 应用或服务实现 | 定位应用界面与业务实现 |
 
 <a id="readme-section-8"></a>
 
-## 开发
+<a id="开发"></a>
+
+<a id="readme-detail-30"></a>
+
+## 🧪 开发
 
 ```bash
 npm ci
@@ -214,7 +275,11 @@ npm audit --omit=dev
 
 <a id="readme-section-9"></a>
 
-## 发布
+<a id="发布"></a>
+
+<a id="readme-detail-32"></a>
+
+## 📤 发布
 
 - 最新发布说明：[v0.2.1](docs/releases/v0.2.1.md)、[v0.2.0](docs/releases/v0.2.0.md)、[v0.1.0](docs/releases/v0.1.0.md)
 - 推送 `v*` tag 后会触发 GitHub Actions release workflow，打包 npm tarball 并创建对应 GitHub Release。
@@ -222,7 +287,11 @@ npm audit --omit=dev
 
 <a id="readme-section-10"></a>
 
-## 隐私默认值
+<a id="隐私默认值"></a>
+
+<a id="readme-detail-34"></a>
+
+## 🔒 隐私默认值
 
 为了减少数据进入对话上下文的机会，服务默认：
 
@@ -237,25 +306,41 @@ npm audit --omit=dev
 
 <a id="readme-section-11"></a>
 
-## 安全
+<a id="安全"></a>
+
+<a id="readme-detail-36"></a>
+
+## 🔒 安全
 
 如发现疑似安全问题，请不要发公开 issue。见 [SECURITY.md](SECURITY.md)。
 
 <a id="readme-section-12"></a>
 
-## 贡献
+<a id="贡献"></a>
+
+<a id="readme-detail-38"></a>
+
+## 🤝 贡献
 
 见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 <a id="readme-section-13"></a>
 
-## 许可证
+<a id="许可证"></a>
+
+<a id="readme-detail-40"></a>
+
+## 📄 许可证
 
 MIT。见 [LICENSE](LICENSE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 <a id="readme-section-14"></a>
 
-## 作者
+<a id="作者"></a>
+
+<a id="readme-detail-42"></a>
+
+## 👤 作者
 
 - X: [Mileson07](https://x.com/Mileson07)
 - 小红书: [超级峰](https://xhslink.com/m/4LnJ9aB1f97)
